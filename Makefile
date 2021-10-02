@@ -17,7 +17,7 @@ serve:
 	symfony serve
 
 test:
-	./bin/phpunit
+	php ./bin/phpunit
 
 reports:
 	./bin/console cron:report

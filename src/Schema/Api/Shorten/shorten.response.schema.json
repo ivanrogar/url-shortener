@@ -1,0 +1,14 @@
+{
+  "$id": "shorten.response.schema.json",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "URL shorten response schema",
+  "type": "object",
+  "required": [
+    "shortUrl"
+  ],
+  "properties": {
+    "shortUrl": {
+      "type": "string"
+    }
+  }
+}

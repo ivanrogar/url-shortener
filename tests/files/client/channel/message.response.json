@@ -1,0 +1,15 @@
+{
+  "messages": [
+    {
+      "to": "000000",
+      "status": {
+        "groupId": 1,
+        "groupName": "PENDING",
+        "id": 26,
+        "name": "MESSAGE_ACCEPTED",
+        "description": "Message sent to next instance"
+      },
+      "messageId": "id"
+    }
+  ]
+}

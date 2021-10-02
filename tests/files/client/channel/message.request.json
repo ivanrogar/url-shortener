@@ -1,0 +1,13 @@
+{
+  "messages": [
+    {
+      "from": "Info",
+      "destinations": [
+        {
+          "to": "000000"
+        }
+      ],
+      "text": "Text"
+    }
+  ]
+}

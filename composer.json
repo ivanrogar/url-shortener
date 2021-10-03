@@ -15,6 +15,7 @@
         "friendsofphp/php-cs-fixer": "^3.1",
         "guzzlehttp/guzzle": "^7.3",
         "justinrainbow/json-schema": "^5.2",
+        "nesbot/carbon": "^2.53",
         "pdepend/pdepend": "dev-master",
         "phlak/strgen": "^3.0",
         "phpmd/phpmd": "^2.10",

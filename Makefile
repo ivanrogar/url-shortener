@@ -20,7 +20,7 @@ test:
 	php ./bin/phpunit
 
 reports:
-	./bin/console cron:report
+	php ./bin/console cron:report
 
 queue:
-	./bin/console messenger:consume async
+	php ./bin/console messenger:consume async

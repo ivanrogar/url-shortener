@@ -32,7 +32,11 @@ class ReportCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $this->urlReport->processAll();
+        $this->urlReport->processDaily();
+
+        $this->urlReport->processWeekly();
+
+        $this->urlReport->processMonthly();
 
         return 0;
     }

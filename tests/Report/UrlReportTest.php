@@ -7,6 +7,7 @@ namespace App\Tests\Report;
 use App\Contract\Repository\UrlRepositoryInterface;
 use App\Report\UrlReport;
 use App\Message\SmsNotification;
+use Carbon\Carbon;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Messenger\Envelope;
@@ -46,15 +47,24 @@ class UrlReportTest extends TestCase
         );
     }
 
+    protected function tearDown(): void
+    {
+        Carbon::setTestNow();
+    }
+
     public function testProcessDaily()
     {
-        $now = new DateTime(date('Y-m-d H:i:s', strtotime('2021-10-02 08:00:00')));
+        $now = Carbon::now(new DateTimeZone('Europe/Zagreb'));
 
-        $expectedFrom = clone $now;
-        $expectedFrom->modify('-1 days');
+        $now->setTime(8, 0);
+
+        Carbon::setTestNow($now);
+
+        $expectedFrom = $now->clone();
+        $expectedFrom->subDays(1);
         $expectedFrom->setTime(0, 0);
 
-        $expectedTo = clone $expectedFrom;
+        $expectedTo = $expectedFrom->clone();
         $expectedTo->setTime(23, 59, 59);
 
         $this
@@ -91,25 +101,31 @@ class UrlReportTest extends TestCase
                 }
             );
 
-        $this->subject->processDaily($now);
+        $this->subject->processDaily();
     }
 
     public function testProcessWeekly()
     {
-        $now = DateTime::createFromFormat(
-            'Y-m-d',
-            date('Y-m-d', strtotime('next monday'))
-        );
+        $carbon = Carbon::now(new DateTimeZone('Europe/Zagreb'));
 
-        $now->setTime(8, 1);
+        $carbon
+            ->addWeek()
+            ->weekday(1)
+            ->setTime(8, 1);
 
-        $expectedFrom = clone $now;
-        $expectedFrom->modify('-7 days');
-        $expectedFrom->setTime(0, 0);
+        Carbon::setTestNow($carbon);
 
-        $expectedTo = clone $now;
-        $expectedTo->modify('-1 days');
-        $expectedTo->setTime(23, 59, 59);
+        $expectedFrom = $carbon->clone();
+
+        $expectedFrom
+            ->subWeek()
+            ->weekday(1)
+            ->setTime(0, 0);
+
+        $expectedTo = $expectedFrom
+            ->clone()
+            ->endOfWeek()
+            ->setTime(23, 59, 59);
 
         $this
             ->urlRepository
@@ -146,33 +162,32 @@ class UrlReportTest extends TestCase
                 }
             );
 
-        $this->subject->processWeekly($now);
+        $this->subject->processWeekly();
     }
 
     public function testProcessMonthly()
     {
-        $now = new DateTime('now', new DateTimeZone('Europe/Zagreb'));
+        $carbon = Carbon::now(new DateTimeZone('Europe/Zagreb'));
 
-        $now = DateTime::createFromFormat(
-            'Y-m-d',
-            date('Y-m-d', strtotime('first monday ' . $now->format('Y-m')))
-        );
+        $carbon
+            ->firstOfMonth(1)
+            ->setTime(8, 0);
 
-        $now->setTime(8, 0);
+        Carbon::setTestNow($carbon);
 
-        $expectedFrom = DateTime::createFromFormat(
-            'Y-m-d',
-            date('Y-m-d', strtotime('first day of last month'))
-        );
+        $expectedFrom = $carbon->clone();
 
-        $expectedFrom->setTime(0, 0);
+        $expectedFrom
+            ->subMonth()
+            ->firstOfMonth()
+            ->setTime(0, 0);
 
-        $expectedTo = DateTime::createFromFormat(
-            'Y-m-d',
-            date('Y-m-d', strtotime('last day of last month'))
-        );
+        $expectedTo = $carbon->clone();
 
-        $expectedTo->setTime(23, 59, 59);
+        $expectedTo
+            ->subMonth()
+            ->lastOfMonth()
+            ->setTime(23, 59, 59);
 
         $this
             ->urlRepository
@@ -209,6 +224,6 @@ class UrlReportTest extends TestCase
                 }
             );
 
-        $this->subject->processMonthly($now);
+        $this->subject->processMonthly();
     }
 }

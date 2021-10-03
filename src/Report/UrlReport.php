@@ -6,9 +6,10 @@ namespace App\Report;
 
 use App\Contract\Repository\UrlRepositoryInterface;
 use App\Message\SmsNotification;
+use Carbon\Carbon;
 use Cron\CronExpression;
 use Symfony\Component\Messenger\MessageBusInterface;
-use DateTime;
+use Carbon\CarbonInterface;
 use DateTimeZone;
 
 class UrlReport
@@ -20,6 +21,8 @@ class UrlReport
     private UrlRepositoryInterface $urlRepository;
     private MessageBusInterface $messageBus;
 
+    private ?CarbonInterface $now = null;
+
     public function __construct(
         UrlRepositoryInterface $urlRepository,
         MessageBusInterface $messageBus
@@ -28,34 +31,29 @@ class UrlReport
         $this->messageBus = $messageBus;
     }
 
-    public function processAll(?DateTime $now = null)
+    public function processDaily()
     {
-        if ($now === null) {
-            $now = new DateTime(date('Y-m-d H:m:s'), new DateTimeZone('Europe/Zagreb'));
-        }
+        $now = $this->getNow();
 
-        $this->processDaily($now);
-
-        $this->processWeekly($now);
-
-        $this->processMonthly($now);
-    }
-
-    public function processDaily(DateTime $now)
-    {
         $cron = new CronExpression(self::TYPE_DAILY);
 
-        if ($cron->isDue($now)) {
-            $fromDate = clone $now;
+        if ($cron->isDue($now->toDateTime())) {
+            $fromDate = $now->clone();
 
-            $fromDate->modify('-1 days');
+            $fromDate->subDays(1);
 
-            $toDate = clone $fromDate;
+            $toDate = $fromDate->clone();
 
             $fromDate->setTime(0, 0);
+
             $toDate->setTime(23, 59, 59);
 
-            $result = $this->urlRepository->getUsageBetween($fromDate, $toDate);
+            $result = $this
+                ->urlRepository
+                ->getUsageBetween(
+                    $fromDate->toDateTime(),
+                    $toDate->toDateTime()
+                );
 
             $this
                 ->messageBus
@@ -68,23 +66,32 @@ class UrlReport
         }
     }
 
-    public function processWeekly(DateTime $now)
+    public function processWeekly()
     {
+        $now = $this->getNow();
+
         $cron = new CronExpression(self::TYPE_WEEKLY);
 
-        if ($cron->isDue($now)) {
-            $fromDate = clone $now;
+        if ($cron->isDue($now->toDateTime())) {
+            $fromDate = $now->clone();
 
-            $fromDate->modify('-7 days');
+            $fromDate
+                ->subWeek()
+                ->weekday(1);
 
-            $toDate = clone $now;
-
-            $toDate->modify('-1 days');
+            $toDate = $fromDate
+                ->clone()
+                ->endOfWeek();
 
             $fromDate->setTime(0, 0);
             $toDate->setTime(23, 59, 59);
 
-            $result = $this->urlRepository->getUsageBetween($fromDate, $toDate);
+            $result = $this
+                ->urlRepository
+                ->getUsageBetween(
+                    $fromDate->toDateTime(),
+                    $toDate->toDateTime()
+                );
 
             $this
                 ->messageBus
@@ -97,31 +104,37 @@ class UrlReport
         }
     }
 
-    public function processMonthly(DateTime $now)
+    public function processMonthly()
     {
+        $now = $this->getNow();
+
         $cron = new CronExpression(self::TYPE_MONTHLY);
 
-        if ($cron->isDue($now)) {
-            $firstMonday = DateTime::createFromFormat(
-                'Y-m-d',
-                date('Y-m-d', strtotime('first monday ' . $now->format('Y-m')))
-            );
+        if ($cron->isDue($now->toDateTime())) {
+            $firstMonday = $now
+                ->clone()
+                ->firstOfMonth(1)
+                ->setTime($now->hour, $now->minute);
 
-            if ($now->format('Y-m-d') === $firstMonday->format('Y-m-d')) {
-                $fromDate = DateTime::createFromFormat(
-                    'Y-m-d',
-                    date('Y-m-d', strtotime('first day of last month'))
-                );
+            if ($firstMonday->eq($now)) {
+                $fromDate = $now
+                    ->clone()
+                    ->subMonth()
+                    ->firstOfMonth()
+                    ->setTime(0, 0);
 
-                $toDate = DateTime::createFromFormat(
-                    'Y-m-d',
-                    date('Y-m-d', strtotime('last day of last month'))
-                );
+                $toDate = $now
+                    ->clone()
+                    ->subMonth()
+                    ->lastOfMonth()
+                    ->setTime(23, 59, 59);
 
-                $fromDate->setTime(0, 0);
-                $toDate->setTime(23, 59, 59);
-
-                $result = $this->urlRepository->getUsageBetween($fromDate, $toDate);
+                $result = $this
+                    ->urlRepository
+                    ->getUsageBetween(
+                        $fromDate->toDateTime(),
+                        $toDate->toDateTime()
+                    );
 
                 $this
                     ->messageBus
@@ -133,5 +146,14 @@ class UrlReport
                     );
             }
         }
+    }
+
+    private function getNow(): CarbonInterface
+    {
+        if ($this->now === null) {
+            $this->now = Carbon::now(new DateTimeZone('Europe/Zagreb'));
+        }
+
+        return $this->now;
     }
 }
